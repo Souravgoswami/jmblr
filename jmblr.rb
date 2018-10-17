@@ -23,13 +23,14 @@ EOF
 exit! 0
 end unless ARGV[0].nil?
 
-$status, sortedwords = nil, []
+$status = nil
 puts ['Please Wait a Second', 'Just a Second!', 'Umm...', 'Hi there!'].sample
 Thread.new { loop do '|/-\\'.chars do |c| print "#{c}\r" ; sleep 0.03 ; break if $status end end }
 
-unsorted = File.open('word').readlines.map(&:chomp).map(&:downcase).select { |i| i =~ /[a-z]/}.uniq
-unsorted.each do |ch| sortedwords << ch.split('').sort.join('') end
+unsorted = File.open('words').readlines.map(&:chomp).map(&:downcase).select { |i| i =~ /[a-z]/}.uniq
+sortedwords = unsorted.map do |ch| ch.split('').sort.join end
 $status = 0
+
 unless ARGV.empty?
 	puts "\033[H\033[J#{['Here\'s what I found!', 'Alright... Ready!'].sample}...\r"
 	ARGV.each do |index|
@@ -48,13 +49,14 @@ else
 			else w += c ; search += c end
 
 		puts "\033[1;34m=" * %x(tput cols).to_i + "Possible Matches for #{search}:" unless search.empty?
+		puts "\033[1;34m=" * %x(tput cols).to_i
 		puts "\033[5m#{['Type a jumble word!', 'Type a word', 'Press esc when you are done!'].sample}\033[0m\r" if search.empty?
 
-		w = w.downcase.split('').sort.join('')
+		w = w.downcase.split('').sort.join
 		sortedwords.each_with_index do |sw, i| puts "\033[1;32m#{unsorted[i]}" if sw == w end
 
 		rndwrd = sortedwords.sample if (!rndwrd.start_with?(search) or search.empty?) and (inp.ord != 127 or rndwrd != search)
 		puts "\033[1;34m=" * %x(tput cols).to_i + "\033[1;34mSearch For: #{search}"
-		puts "\n" * (%x(tput lines).to_i/2) + "\033[38;5;170mA fun challenge for you, can you solve \033[38;5;#{rand(30..40)}m#{rndwrd}\033[0m?\r"
+		puts "\n" * (%x(tput lines).to_i/3) + "\033[38;5;170mA fun challenge for you, can you solve \033[38;5;#{rand(30..40)}m#{rndwrd}\033[0m?\r"
 	end
 end
