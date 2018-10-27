@@ -31,26 +31,26 @@ end unless ARGV[0].nil?
 Red, Green, Blue, Pink, Blink, Reset = "\033[1;31m", "\033[1;32m", "\033[1;34m", "\033[1;35m", "\033[05m", "\033[0m"
 
 if ARGV.include?('-u') or ARGV.include?('--update')
-	require 'net/http'
-	print "#{Pink}Update the database? [#{Blink}#{Green}n#{Pink}/#{Red}Y#{Reset}#{Pink}]: #{Blue}"
-	exit! 0 unless STDIN.gets.chomp.downcase.start_with?('y')
-	puts "#{Green}Downloading data from #{Pink}https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words#{Reset}"
-	data = Net::HTTP.get(URI('https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words'))
 	begin
-	unless data.chomp == '404: Not Found'
-		puts "\n#{Green}Writing #{Pink}#{(data.chars.size/1000000.0).round(2)} MB #{Green}to words. Please Wait a Moment.#{Reset}\n\n"
-		file = File.open('words', 'w+')
-		file.write(data)
-		file.close
-		puts "#{Green}All done! The file has been saved to #{Red}#{Dir.pwd}. #{Green}Run #{Blue}#{__FILE__} #{Green} to begin solving puzzles!#{Reset}"
-		exit! 0
-	else
-		puts 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: souravgoswami@protonmail.com'
-		exit! 128
-	end
+		print "#{Pink}Update the database? [#{Blink}#{Green}N#{Pink}/#{Red}y#{Reset}#{Pink}]: #{Blue}"
+		require 'net/http'
+		exit! 0 unless STDIN.gets.chomp.downcase.start_with?('y')
+		puts "#{Green}Downloading data from #{Pink}https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words#{Reset}"
+		data = Net::HTTP.get(URI('https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words'))
+		unless data.chomp == '404: Not Found'
+			puts "\n#{Green}Writing #{Pink}#{(data.chars.size/1000000.0).round(2)} MB #{Green}to words. Please Wait a Moment.#{Reset}\n\n"
+			file = File.open('words', 'w+')
+			file.write(data)
+			file.close
+			puts "#{Green}All done! The file has been saved to #{Red}#{Dir.pwd}/words#{Green}. Run #{Blue}#{__FILE__}#{Green} to begin solving puzzles!#{Reset}"
+			exit! 0
+		else
+			puts 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: souravgoswami@protonmail.com'
+			exit! 128
+		end
 	rescue Exception
-		puts "The site https://raw.githubusercontent.com/Souravgoswami/jmblr/master/word is not reachable at the moment.\namespace : do
-			Please make sure that you have an active internet connection."
+		puts "The site https://raw.githubusercontent.com/Souravgoswami/jmblr/master/word is not reachable at the moment."
+		puts "Please make sure that you have an active internet connection."
 		exit! 127
 		end
 end
