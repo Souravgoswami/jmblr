@@ -218,7 +218,7 @@ else
 
 			if c == "\r" then c = ''
 				elsif c == "\u007F" then search.chop! unless search.empty? ; w = search
-				elsif c == "\u0004" || c == "\u0012" then search, w = '', ''
+				elsif c == "\u0004" || c == "\u0002" then search, w = '', ''
 				elsif c == "\u0003" then colour_switch += 1
 				else w += c ; search += c end
 
