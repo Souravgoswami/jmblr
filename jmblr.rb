@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby -w
+#!/usr/bin/ruby -W0
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
 # Version 1.3
 # GNU General Public License v3.0
@@ -7,10 +7,10 @@ require 'io/console'
 STDOUT.sync, STDIN.sync = true, true
 
 # TODO: Set the default path if the source code is running
-# Default_Path = "#{Dir.pwd}/words"
+Default_Path = "#{Dir.pwd}/words"
 
 # TODO:  for debian package, and arch package
-Default_Path = "/usr/share/jmblr/words"
+# Default_Path = "/usr/share/jmblr/words"
 
 path = nil
 
