@@ -1,6 +1,6 @@
-#!/usr/bin/env ruby -w
+#!/usr/bin/env ruby -W0
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
-# Version 1.1
+# Version 1.2
 # GNU General Public License v3.0
 
 require 'io/console'
@@ -18,7 +18,7 @@ unless word_arg.empty?
 	end
 end
 
-path = "words" if path.nil?
+path = Default_Path if path.nil?
 
 colour_switch = 0
 if ARGV.include?('--no-colour') || ARGV.include?('-nc')
