@@ -1,11 +1,17 @@
-#!/usr/bin/env ruby -W0
+#!/usr/bin/env ruby -w
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
-# Version 1.2
+# Version 1.3
 # GNU General Public License v3.0
 
 require 'io/console'
 STDOUT.sync, STDIN.sync = true, true
-Default_Path = 'words'
+
+# TODO: Set the default path if the source code is running
+# Default_Path = "#{Dir.pwd}/words"
+
+# TODO:  for debian package, and arch package
+Default_Path = "/usr/share/jmblr/words"
+
 path = nil
 
 word_arg = ARGV.select { |arg| arg.start_with?('--words=') || arg.start_with?('-w=') }
@@ -29,7 +35,7 @@ end
 
 colourize = ->(string='Ruby', colour=(40..45), linebreak=false) {
 	enable_colours = colour_switch % 2 == 0 ? true : false
-	colour = colour.to_a if colour.is_a?(Range)
+	colour = colour.to_a if colour.is_a?(Range) || colour.is_a?(Enumerator)
 	arr_size = colour.size
 
 	string.split("\n").each do |str|
@@ -46,6 +52,95 @@ colourize = ->(string='Ruby', colour=(40..45), linebreak=false) {
 	end
 }
 
+update = -> {
+	begin
+		colourize.call("Update the database? (N/y): ")
+		exit! 0 unless STDIN.gets.chomp.downcase.start_with?('y')
+
+		require 'net/http'
+		site = "https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words"
+
+		colourize.call("Downloading data from #{site}")
+		puts
+
+		data = Net::HTTP.get(URI("#{site}"))
+		unless data.chomp == '404: Not Found'
+			colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", 208..213, true)
+
+			begin
+				unless File.exist?(path.split('/')[0..-2].join('/'))
+					Dir.mkdir(path.split('/')[0..-2].join('/'))
+				end
+
+				File.open(path, 'w+') { |file| file.write(data) }
+
+			rescue Errno::ENOENT
+				colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", 196..201, true)
+				colourize.call("The file I am trying write to is: #{path}", 196..201, true)
+
+				exit! 126
+
+			rescue Errno::EACCES
+				colourize.call("To write to #{path}, you need root privilege...", 196..201, true)
+				exit! 126
+
+			rescue SocketError
+				colourize.call('Make sure you have an active internet connection', (196..201).reverse_each, true)
+				colourize.call('Retry? (N/y)', 196..201, true)
+				retry if  gets.chomp.downcase == 'y'
+				exit! 126
+			end
+
+			colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", 214..219, true)
+			puts
+
+			exit! 0
+		else
+			colourize.call 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: <souravgoswami@protonmail.com>'
+			exit! 126
+		end
+
+	rescue Exception => error
+		colourize.call('Something went wrong.')
+		puts
+
+		colourize.call('If the problem persists, then please contact the developer')
+		puts
+
+		colourize.call('Email: <souravgoswami@protonmail.com>')
+		puts
+
+		colourize.call("Inform the developer about \"#{error}\"")
+		puts "\n"
+
+		colourize.call(error.backtrace.join("\n"))
+		puts
+
+		exit! 127
+	end
+	exit! 0
+}
+
+unless File.exist?(path)
+	colourize.call("The #{path} file doesn't exist...")
+	puts
+
+	colourize.call("Please run #{__FILE__} --update or #{__FILE__} -u to download the wordlist")
+	puts
+
+	colourize.call("You can mention the path with --words=path or -w=path option")
+	puts
+
+	colourize.call("Run #{__FILE__} --help or #{__FILE__} -h for more details")
+	puts
+
+	colourize.call('However, you can run the update now. Do you want that?(Y/n)')
+	puts
+
+	exit! 120 if gets.chomp.downcase == 'n'
+	update.call
+end
+
 # exit if no tty found
 unless STDOUT.tty?
 	colourize.call('Please make sure to run me in a terminal')
@@ -59,18 +154,6 @@ if ARGV.include?('-h') or ARGV.include?('--help')
 colourize.call(
 "Hi my name is Jumbler! Also known as jmblr...
 I am a small program to whom you give jumbled up word(s), and get matching words.
-
-What job can I accomplish?
-	-> Give me an jumble word. I will solve them.
-	-> Press the escape key when you want to leave!
-	- The default wordlist is pretty huge, it could take some time to start...
-			(--word= or -w=) for custom wordlist.
-
-	-> You can pass me some arguements or output redirection from
-		another program!
-
-	-> I will not show any result if I don't get something meaningful from
-		your jumbled word(s).
 
 Arguments:
 	--help			-h	Show this help message.
@@ -101,7 +184,7 @@ Arguments:
 
 	Useful keys while live searching (running #{__FILE__} without an option or redirection):
 		backspace		Delete the last character.
-		ctrl + d/ctrl + b	Delete a whole word.
+		ctrl + d/ctrl + b	Clear everything you typed.
 		ctrl + x/ctrl+q		Exit.
 		ctrl + r		Refresh the screen.
 		ctrl + c		Toggle colours.
@@ -112,35 +195,7 @@ exit! 0
 end unless ARGV[0].nil?
 
 if ARGV.include?('-u') or ARGV.include?('--update')
-	begin
-		colourize.call("Update the database? (N/y): ")
-		require 'net/http'
-		exit! 0 unless STDIN.gets.chomp.downcase.start_with?('y')
-		site = "https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words"
-		colourize.call("Downloading data from #{site}")
-		puts
-
-		data = Net::HTTP.get(URI("#{site}"))
-		unless data.chomp == '404: Not Found'
-			colourize.call("#{(data.chars.size/1000000.0).round(2)} MB to words. Please Wait a Moment")
-			puts
-
-			File.open('words', 'w+') { |file| file.write(data) }
-
-			colourize.call("All done! The file has been saved to #{Dir.pwd}/words. Run #{__FILE__} to begin solving puzzles!")
-			puts
-
-			exit! 0
-		else
-			colourize.call 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: <souravgoswami@protonmail.com>'
-			exit! 126
-		end
-
-	rescue Exception
-		puts "The site #{site} is not reachable at the moment."
-		puts "Please make sure that you have an active internet connection."
-		exit! 127
-	end
+	update.call
 end
 
 $status = nil
@@ -188,7 +243,7 @@ if pipe
 
 		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
 
-		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).to_a.reverse].sample)
+		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).reverse_each].sample)
 	end
 	exit if ARGV.empty?
 end
@@ -202,7 +257,7 @@ unless ARGV.empty?
 
 		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
 
-		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).to_a.reverse].sample)
+		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).reverse_each].sample)
 	end
 else
 	print("\033[H\033[J")
@@ -231,10 +286,10 @@ else
 				colourize.call(['Type a jumble word!', 'Type a word', 'Press esc when you are done!'].sample)
 				puts "\033[0m"
 			else
-				colourize.call("Possible Matches for #{search}:", (208..213).to_a.reverse, true)
+				colourize.call("Possible Matches for #{search}:", (208..213).reverse_each, true)
 			end
 
-			colourize.call("=" * %x(tput cols).to_i, (40..45).to_a.reverse)
+			colourize.call("=" * %x(tput cols).to_i, (40..45).reverse_each)
 			puts
 
 			w = w.downcase.split('').sort.join
@@ -247,7 +302,7 @@ else
 
 			print("\n" * (%x(tput lines).to_i/3))
 
-			colourize.call("A fun challenge for you, can you solve #{rndwrd}" + "?", (220..225))
+			colourize.call("A fun challenge for you, can you solve #{rndwrd}" + "?", (214..219).reverse_each)
 		rescue Exception
 			exit! 128
 		end
