@@ -211,7 +211,7 @@ Thread.new do
 end
 
 unsorted = File.readlines(path).map(&:strip).map(&:downcase).select { |i| i =~ /^[a-z]+$/}.uniq
-sortedwords = unsorted.map { |ch| ch.chars.to_a.sort.join }
+sortedwords = unsorted.map { |ch| ch.chars.sort.join }
 unsorted_size = unsorted.size
 
 $status = 1
