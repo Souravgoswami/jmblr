@@ -1,6 +1,6 @@
 # jmblr (jumbler - organize a shuffled word)
 Type any kind of jumble word and get a meaningful word if it exists in the given word list.
-It will work with Linux terminal, ncurses package is needed (is ditributed by most of the distribution by default) to calculate the terminal height and width and draw the trailing equals (=) and the quiz!
+It will work with most of the Linux terminals. Don't run somewhere without a TTY!
 
 Solve any kind of jumble word with jumbler. It's short and simple.
 
