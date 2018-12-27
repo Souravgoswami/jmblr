@@ -214,6 +214,11 @@ unsorted = File.readlines(path).map(&:strip).map(&:downcase).select { |i| i =~ /
 sortedwords = unsorted.map { |ch| ch.chars.sort.join }
 unsorted_size = unsorted.size
 
+search_word = ->(word) do
+		word = word.strip.downcase.chars.sort.join
+		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == word }
+end
+
 $status = 1
 
 pipe, texts = nil, ''
@@ -233,11 +238,9 @@ if pipe
 	end
 
 	texts.split.each do |text|
-		colourize.call("Results for '#{text}' in the dictionary", [(208..213), (208..213).reverse_each, (40..45)].sample)
+		colourize.call("Possible matches for '#{text}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
 		puts "\n" * 2
-		w = text.downcase.chars.sort.join
-		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
-
+		search_word.call(text)
 		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
 	end
 	exit if ARGV.empty?
@@ -245,11 +248,9 @@ end
 
 unless ARGV.empty?
 	ARGV.each do |text|
-		colourize.call("Results for '#{text}' in the dictionary", [(208..213), (208..213).reverse_each, (40..45)].sample)
+		colourize.call("Possible matches for '#{text}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
 		puts "\n" * 2
-
-		w = text.downcase.chars.sort.join
-		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
+		search_word.call(text)
 		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
 	end
 else
@@ -268,7 +269,7 @@ else
 				elsif c == "\u007F" then search.chop! unless search.empty? ; w = search
 				elsif c == "\u0004" || c == "\u0002" then search, w = '', ''
 				elsif c == "\u0003" then colour_switch += 1
-				else w += c ; search += c end
+				else w += c ; search += c.downcase end
 
 			print("\033[H\033[J")
 			colourize.call("=" * Terminal_Width)
@@ -279,15 +280,13 @@ else
 				colourize.call(['Type a jumble word!', 'Type a word', 'Press esc when you are done!'].sample)
 				puts "\033[0m"
 			else
-				colourize.call("Possible Matches for #{search}:", [(208..213), (208..213).reverse_each].sample)
+				colourize.call("Possible matches for '#{search}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
 				puts
 			end
 
 			colourize.call("=" * Terminal_Width, (40..45).reverse_each)
 			puts
-
-			w = w.downcase.chars.sort.join
-			unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
+			search_word.call(search)
 
 			rndwrd = sortedwords.sample if search.empty? && rndwrd != search && inp != "\u0004" && inp != "\u00012"
 
