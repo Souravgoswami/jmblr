@@ -12,6 +12,13 @@ Default_Path = "#{File.dirname(__FILE__)}/words"
 # TODO:  for debian package, and arch package
 # Default_Path = "/usr/share/jmblr/words"
 
+# Let's declare the colour so the range will not be created everytime
+Colour1 = 40..45
+Colour2 = 208..213
+Colour3 = 214..219
+Colour4 = 196..201
+Colour5 = 214..219
+
 path = nil
 
 word_arg = ARGV.select { |arg| arg.start_with?('--words=') || arg.start_with?('-w=') }
@@ -33,7 +40,7 @@ if ARGV.include?('--no-colour') || ARGV.include?('-nc')
 	colour_switch = 1
 end
 
-colourize = ->(string='Ruby', colour=(40..45)) do
+colourize = ->(string='Ruby', colour=Colour1) do
 	enable_colours = colour_switch % 2 == 0 ? true : false
 	colour = colour.to_a if colour.is_a?(Range) || colour.is_a?(Enumerator)
 	arr_size = colour.size
@@ -63,24 +70,16 @@ Arguments:
 						(update if available)
 	--words=		-w=	Specify the wordlist that will be used for searching.
 					(The word file has to be in plain text ASCII format)
-
-	Examples:
-		1. echo altering bob voles ybur | #{__FILE__}
-		2. #{__FILE__} triangel bob loevs ruyb
-		3. cat a_file.txt | #{__FILE__}
-		4. All of the above with --no-colour or -nc to eliminate colours.
-		5. All the above exampleswith --words=path_to_wordlist or -w=path_to_wordlist
-			Example 1 (assuming you have a british wordlist in /usr/share/dict/):
-				echo triangle bob | #{__FILE__} --words=/usr/share/dict/british
-			Example 2 (assuming that you have downloaded a wordlist in txt format):
-				echo triagnle | #{__FILE__} -w=/home/user/Downloads/worlist.txt
+	--random		-r		Show a random word
+					(type -rr or --randomr for 2 words)
+					(-rrr or --randomrr for 3 words and so on)
 
 	Useful keys while live searching (running #{__FILE__} without an option or redirection):
 		backspace		Delete the last character.
 		ctrl + d/ctrl + b	Clear everything you typed.
 		ctrl + x/ctrl+q		Exit.
 		ctrl + r		Refresh the screen.
-		ctrl + c		Toggle colours.", [(208..213), (208..213).reverse_each, (40..45)].sample)
+		ctrl + c		Toggle colours.", [Colour2, Colour2.reverse_each, Colour1].sample)
 
 puts "\n" * 2
 exit! 0
@@ -99,7 +98,7 @@ update = -> do
 
 		data = Net::HTTP.get(URI("#{site}"))
 		unless data.chomp == '404: Not Found'
-			colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", 208..213)
+			colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", Colour2)
 			puts
 
 			begin
@@ -110,30 +109,30 @@ update = -> do
 				File.open(path, 'w+') { |file| file.write(data) }
 
 			rescue Errno::ENOENT
-				colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", 196..201)
+				colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", Colour4)
 				puts
 
-				colourize.call("The file I am trying write to is: #{path}", 196..201)
+				colourize.call("The file I am trying write to is: #{path}", Colour4)
 				puts
 				exit! 126
 
 			rescue Errno::EACCES
-				colourize.call("To write to #{path}, you need root privilege...", 196..201)
+				colourize.call("To write to #{path}, you need root privilege...", Colour4)
 				puts
 				exit! 126
 
 			rescue SocketError
-				colourize.call('Make sure you have an active internet connection', (196..201).reverse_each)
+				colourize.call('Make sure you have an active internet connection', Colour4.reverse_each)
 				puts
 
-				colourize.call('Retry? (N/y)', 196..201)
+				colourize.call('Retry? (N/y)', Colour4)
 				puts
 
 				retry if  gets.chomp.downcase == 'y'
 				exit! 126
 			end
 
-			colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", 214..219)
+			colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", Colour5)
 			puts
 			exit! 0
 		else
@@ -210,13 +209,19 @@ Thread.new do
 	end
 end
 
-unsorted = File.readlines(path).map(&:strip).map(&:downcase).select { |i| i =~ /^[a-z]+$/}.uniq
+unsorted = File.readlines(path).map(&:strip).map(&:downcase).reject { |i| i =~ /[^a-z]/}.uniq
 sortedwords = unsorted.map { |ch| ch.chars.sort.join }
 unsorted_size = unsorted.size
 
 search_word = ->(word) do
 		word = word.strip.downcase.chars.sort.join
 		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == word }
+end
+
+filter = ->(text='') do
+	text = text.strip.downcase
+	unneeded = text.scan(/[^a-z]/).join
+	text.delete(unneeded)
 end
 
 $status = 1
@@ -238,24 +243,40 @@ if pipe
 	end
 
 	texts.split.each do |text|
-		colourize.call("Possible matches for '#{text}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
+		txt = filter.call(text)
+		colourize.call("Possible matches for '#{txt}': ", Colour2.reverse_each)
 		puts "\n" * 2
-		search_word.call(text)
-		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
+		search_word.call(txt)
+		colourize.call("=" * Terminal_Width, Colour2.reverse_each)
 	end
 	exit if ARGV.empty?
 end
 
+if ARGV.select { |arg| arg.start_with?('--random') || arg.start_with?('-r') }.any?
+	ARGV.select { |arg| arg.start_with?('-r') || arg.start_with?('--random') }.join.count('r').times do
+		word = File.readlines(path).sample.strip.downcase.chars.shuffle.join
+		colourize.call("Possible matches for '#{word}': ", Colour2.reverse_each)
+		puts
+		search_word.call(word)
+		puts
+	end
+		ARGV.each { |arg| ARGV.delete(arg) if arg.start_with?('--random') || arg.start_with?('-r') }
+	exit! 0 if ARGV.empty?
+end
+
 unless ARGV.empty?
 	ARGV.each do |text|
-		colourize.call("Possible matches for '#{text}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
+		txt = filter.call(text)
+
+		colourize.call("Possible matches for '#{txt}': ", Colour2.reverse_each)
 		puts "\n" * 2
-		search_word.call(text)
-		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
+
+		search_word.call(txt)
+		colourize.call("=" * Terminal_Width, Colour2.reverse_each)
 	end
 else
 	print("\033[H\033[J")
-	colourize.call(['Hi! Give me jumbled words!', 'Type me some words', 'Alright... Ready?'].sample, 196..200)
+	colourize.call('Type Something!', Colour5)
 	rndwrd, c, w, search = sortedwords.sample, '', '', '', ''
 	inp = ''
 	loop do
@@ -269,7 +290,10 @@ else
 				elsif c == "\u007F" then search.chop! unless search.empty? ; w = search
 				elsif c == "\u0004" || c == "\u0002" then search, w = '', ''
 				elsif c == "\u0003" then colour_switch += 1
-				else w += c ; search += c.downcase end
+			else
+				w += c
+				search += c.downcase if c =~ /^[a-z\s\d+]+$/
+			end
 
 			print("\033[H\033[J")
 			colourize.call("=" * Terminal_Width)
@@ -279,23 +303,21 @@ else
 				print "\033[05m"
 				colourize.call(['Type a jumble word!', 'Type a word', 'Press esc when you are done!'].sample)
 				puts "\033[0m"
+				print "\n" * 2
+				colourize.call("=" * Terminal_Width)
 			else
-				colourize.call("Possible matches for '#{search}': ", [(208..213), (208..213).reverse_each, (40..45)].sample)
-				puts
+				colourize.call("Possible matches for '#{search}': ", Colour2.reverse_each)
+				print "\n" * 2
+				search_word.call(search)
+				colourize.call("=" * Terminal_Width, Colour1.reverse_each)
 			end
 
-			colourize.call("=" * Terminal_Width, (40..45).reverse_each)
-			puts
-			search_word.call(search)
 
-			rndwrd = sortedwords.sample if search.empty? && rndwrd != search && inp != "\u0004" && inp != "\u00012"
-
-			colourize.call("=" * Terminal_Width)
-			colourize.call("Search For: #{search}", 208..213)
-
+			colourize.call("Search For: #{search}", Colour2)
 			print("\n" * (Terminal_Height.to_i/3))
 
-			colourize.call("A fun challenge for you, can you solve #{rndwrd}" + "?", (214..219).reverse_each)
+			rndwrd = sortedwords.sample.chars.shuffle.join if search.empty? && rndwrd != search && inp != "\u0004"
+			colourize.call("A fun challenge for you, can you solve #{rndwrd} ?", Colour3)
 		rescue Exception
 			exit! 128
 		end
