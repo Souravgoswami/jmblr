@@ -15,7 +15,4 @@ Running the script:
     You can pass command line arguments, and can solve multiple words with a go!
         ruby jmblr triangle ceissp deiorrw
     Any invalid jumble word will not be ignored.
-    
-  4. You need the ncurses package to get it working properly. If it is not installed by default, you can install it from the        repository. ncurses is a very small program, just like this one.
-
   5. For more help, run ./jmblr.rb -h
