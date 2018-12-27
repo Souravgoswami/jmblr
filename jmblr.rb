@@ -1,7 +1,7 @@
 #!/usr/bin/ruby -W0
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
 # GNU General Public License v3.0
-# Version 1.4
+# Version 1.5
 
 require 'io/console'
 STDOUT.sync, STDIN.sync = true, true
