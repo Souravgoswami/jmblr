@@ -1,13 +1,13 @@
 #!/usr/bin/ruby -W0
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
-# Version 1.3
 # GNU General Public License v3.0
+# Version 1.4
 
 require 'io/console'
 STDOUT.sync, STDIN.sync = true, true
 
 # TODO: Set the default path if the source code is running
-Default_Path = "#{Dir.pwd}/words"
+Default_Path = "#{File.dirname(__FILE__)}/words"
 
 # TODO:  for debian package, and arch package
 # Default_Path = "/usr/share/jmblr/words"
@@ -33,12 +33,12 @@ if ARGV.include?('--no-colour') || ARGV.include?('-nc')
 	colour_switch = 1
 end
 
-colourize = ->(string='Ruby', colour=(40..45), linebreak=false) {
+colourize = ->(string='Ruby', colour=(40..45)) do
 	enable_colours = colour_switch % 2 == 0 ? true : false
 	colour = colour.to_a if colour.is_a?(Range) || colour.is_a?(Enumerator)
 	arr_size = colour.size
 
-	string.split("\n").each do |str|
+	string.each_line do |str|
 		print "\033[0m"
 		index, div = 0, str.length/colour.size
 
@@ -48,11 +48,45 @@ colourize = ->(string='Ruby', colour=(40..45), linebreak=false) {
 			print "\033[38;5;#{colour[index]}m#{str[i]}" if enable_colours
 			print string[i] unless enable_colours
 		end
-		puts if linebreak
 	end
-}
+end
 
-update = -> {
+if ARGV.to_a.include?('-h') or ARGV.include?('--help')
+colourize.call(
+"Hi my name is Jumbler! Also known as jmblr...
+I am a small program to whom you give jumbled up word(s), and get matching words.
+
+Arguments:
+	--help			-h	Show this help message.
+	--no-colour		-nc	Add no colours to the output.
+	--update		-u	Download missing dictionary from the internet.
+						(update if available)
+	--words=		-w=	Specify the wordlist that will be used for searching.
+					(The word file has to be in plain text ASCII format)
+
+	Examples:
+		1. echo altering bob voles ybur | #{__FILE__}
+		2. #{__FILE__} triangel bob loevs ruyb
+		3. cat a_file.txt | #{__FILE__}
+		4. All of the above with --no-colour or -nc to eliminate colours.
+		5. All the above exampleswith --words=path_to_wordlist or -w=path_to_wordlist
+			Example 1 (assuming you have a british wordlist in /usr/share/dict/):
+				echo triangle bob | #{__FILE__} --words=/usr/share/dict/british
+			Example 2 (assuming that you have downloaded a wordlist in txt format):
+				echo triagnle | #{__FILE__} -w=/home/user/Downloads/worlist.txt
+
+	Useful keys while live searching (running #{__FILE__} without an option or redirection):
+		backspace		Delete the last character.
+		ctrl + d/ctrl + b	Clear everything you typed.
+		ctrl + x/ctrl+q		Exit.
+		ctrl + r		Refresh the screen.
+		ctrl + c		Toggle colours.", [(208..213), (208..213).reverse_each, (40..45)].sample)
+
+puts "\n" * 2
+exit! 0
+end
+
+update = -> do
 	begin
 		colourize.call("Update the database? (N/y): ")
 		exit! 0 unless STDIN.gets.chomp.downcase.start_with?('y')
@@ -65,7 +99,8 @@ update = -> {
 
 		data = Net::HTTP.get(URI("#{site}"))
 		unless data.chomp == '404: Not Found'
-			colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", 208..213, true)
+			colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", 208..213)
+			puts
 
 			begin
 				unless File.exist?(path.split('/')[0..-2].join('/'))
@@ -75,25 +110,31 @@ update = -> {
 				File.open(path, 'w+') { |file| file.write(data) }
 
 			rescue Errno::ENOENT
-				colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", 196..201, true)
-				colourize.call("The file I am trying write to is: #{path}", 196..201, true)
+				colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", 196..201)
+				puts
 
+				colourize.call("The file I am trying write to is: #{path}", 196..201)
+				puts
 				exit! 126
 
 			rescue Errno::EACCES
-				colourize.call("To write to #{path}, you need root privilege...", 196..201, true)
+				colourize.call("To write to #{path}, you need root privilege...", 196..201)
+				puts
 				exit! 126
 
 			rescue SocketError
-				colourize.call('Make sure you have an active internet connection', (196..201).reverse_each, true)
-				colourize.call('Retry? (N/y)', 196..201, true)
+				colourize.call('Make sure you have an active internet connection', (196..201).reverse_each)
+				puts
+
+				colourize.call('Retry? (N/y)', 196..201)
+				puts
+
 				retry if  gets.chomp.downcase == 'y'
 				exit! 126
 			end
 
-			colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", 214..219, true)
+			colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", 214..219)
 			puts
-
 			exit! 0
 		else
 			colourize.call 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: <souravgoswami@protonmail.com>'
@@ -119,10 +160,10 @@ update = -> {
 		exit! 127
 	end
 	exit! 0
-}
+end
 
-unless File.exist?(path)
-	colourize.call("The #{path} file doesn't exist...")
+unless File.readable?(path)
+	colourize.call File.exist?(path) ? "The #{path} file is not readable! How can I read my words? :(" : "The #{path} file doesn't exist. Where are my words? :'("
 	puts
 
 	colourize.call("Please run #{__FILE__} --update or #{__FILE__} -u to download the wordlist")
@@ -142,80 +183,35 @@ unless File.exist?(path)
 end
 
 # exit if no tty found
-unless STDOUT.tty?
-	colourize.call('Please make sure to run me in a terminal')
-	colourize.call('Terminal like deepin-terminal, gnome-terminal, konsole, terminator, terminix,
-terminology, xfce4-terminal, xterm and others...')
-	exit! 125
+begin
+	Terminal_Width, Terminal_Height = STDOUT.winsize[1], STDOUT.winsize[0]
+
+rescue Errno::ENOTTY
+	colourize.call "The window size can't be determined. Are you running me in a terminal?"
+	puts
+	exit! 2
 end
 
-STDOUT.sync, STDIN.sync = true, true
-if ARGV.include?('-h') or ARGV.include?('--help')
-colourize.call(
-"Hi my name is Jumbler! Also known as jmblr...
-I am a small program to whom you give jumbled up word(s), and get matching words.
-
-Arguments:
-	--help			-h	Show this help message.
-
-	--no-colour		-nc	Add no colours to the output.
-
-	--update		-u	Download missing dictionary from the internet.
-						(update if available)
-	--words=		-w=	Specify the wordlist that will be used for searching.
-					(The word file has to be in plain text ASCII format)
-
-	Examples:
-		1. echo altering bob voles ybur | #{__FILE__}
-
-		2. #{__FILE__} triangel bob loevs ruyb
-
-		3. cat a_file.txt | #{__FILE__}
-
-		4. All of the above with --no-colour or -nc to eliminate colours.
-
-		5. All the above exampleswith --words=path_to_wordlist or -w=path_to_wordlist
-
-			Example 1 (assuming you have a british wordlist in /usr/share/dict/):
-				echo triangle bob | #{__FILE__} --words=/usr/share/dict/british
-
-			Example 2 (assuming that you have downloaded a wordlist in txt format):
-				echo triagnle | #{__FILE__} -w=/home/user/Downloads/worlist.txt
-
-	Useful keys while live searching (running #{__FILE__} without an option or redirection):
-		backspace		Delete the last character.
-		ctrl + d/ctrl + b	Clear everything you typed.
-		ctrl + x/ctrl+q		Exit.
-		ctrl + r		Refresh the screen.
-		ctrl + c		Toggle colours.
-
-", 40..45, true)
-puts
-exit! 0
-end unless ARGV[0].nil?
-
-if ARGV.include?('-u') or ARGV.include?('--update')
-	update.call
-end
+update.call if ARGV.include?('-u') or ARGV.include?('--update')
 
 $status = nil
 
 colourize.call(['Please Wait a Moment, Initializing the Dictionary', 'Umm...Just a couple of seconds please...',
 				'Hi there! Please wait a moment while I initialize the dictionary...'].sample)
-
-Thread.new {
-		loop do
-			'|/-\\'.each_char do |c|
-				colourize.call("#{c}\r") ; sleep 0.03 ;
-				break if $status
-			end
-			break if $status
-	end
-}
 puts
 
-unsorted = File.open(path).readlines.map(&:chomp).map(&:downcase).select { |i| i =~ /^[a-z]+$/}.uniq
-sortedwords = unsorted.map do |ch| ch.split('').sort.join end
+Thread.new do
+		loop do
+		'|/-\\'.each_char do |c|
+			colourize.call("#{c}\r") ; sleep 0.03 ;
+			break if $status
+		end
+		break if $status
+	end
+end
+
+unsorted = File.readlines(path).map(&:strip).map(&:downcase).select { |i| i =~ /^[a-z]+$/}.uniq
+sortedwords = unsorted.map { |ch| ch.chars.to_a.sort.join }
 unsorted_size = unsorted.size
 
 $status = 1
@@ -236,28 +232,25 @@ if pipe
 		texts += val
 	end
 
-	texts.split(' ').each do |text|
-		w = text.downcase.split('').sort.join
-		colourize.call("Looking for #{text} in the dictionary")
+	texts.split.each do |text|
+		colourize.call("Results for '#{text}' in the dictionary", [(208..213), (208..213).reverse_each, (40..45)].sample)
 		puts "\n" * 2
-
+		w = text.downcase.chars.sort.join
 		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
 
-		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).reverse_each].sample)
+		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
 	end
 	exit if ARGV.empty?
 end
 
 unless ARGV.empty?
 	ARGV.each do |text|
-		colourize.call("Looking for #{text} in the dictionary")
+		colourize.call("Results for '#{text}' in the dictionary", [(208..213), (208..213).reverse_each, (40..45)].sample)
 		puts "\n" * 2
 
-		w = text.downcase.split('').sort.join
-
+		w = text.downcase.chars.sort.join
 		unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
-
-		colourize.call("=" * %x(tput cols).to_i, [(40..45), (40..45).reverse_each].sample)
+		colourize.call("=" * Terminal_Width, [(40..45), (40..45).reverse_each].sample)
 	end
 else
 	print("\033[H\033[J")
@@ -278,7 +271,7 @@ else
 				else w += c ; search += c end
 
 			print("\033[H\033[J")
-			colourize.call("=" * %x(tput cols).to_i)
+			colourize.call("=" * Terminal_Width)
 			puts
 
 			if search.empty?
@@ -286,21 +279,22 @@ else
 				colourize.call(['Type a jumble word!', 'Type a word', 'Press esc when you are done!'].sample)
 				puts "\033[0m"
 			else
-				colourize.call("Possible Matches for #{search}:", (208..213).reverse_each, true)
+				colourize.call("Possible Matches for #{search}:", [(208..213), (208..213).reverse_each].sample)
+				puts
 			end
 
-			colourize.call("=" * %x(tput cols).to_i, (40..45).reverse_each)
+			colourize.call("=" * Terminal_Width, (40..45).reverse_each)
 			puts
 
-			w = w.downcase.split('').sort.join
+			w = w.downcase.chars.sort.join
 			unsorted_size.times { |i| puts unsorted[i] if sortedwords[i] == w }
 
 			rndwrd = sortedwords.sample if search.empty? && rndwrd != search && inp != "\u0004" && inp != "\u00012"
 
-			colourize.call("=" * %x(tput cols).to_i)
+			colourize.call("=" * Terminal_Width)
 			colourize.call("Search For: #{search}", 208..213)
 
-			print("\n" * (%x(tput lines).to_i/3))
+			print("\n" * (Terminal_Height.to_i/3))
 
 			colourize.call("A fun challenge for you, can you solve #{rndwrd}" + "?", (214..219).reverse_each)
 		rescue Exception
