@@ -74,7 +74,7 @@ Arguments:
 					(type -rr or --randomr for 2 words)
 					(-rrr or --randomrr for 3 words and so on)
 
-	Useful keys while live searching (running #{__FILE__} without an option or redirection):
+	Useful keys while live searching (running #{__FILE__} without an argument or redirection):
 		backspace		Delete the last character.
 		ctrl + d/ctrl + b	Clear everything you typed.
 		ctrl + x/ctrl+q		Exit.
