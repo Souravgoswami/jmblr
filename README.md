@@ -10,14 +10,12 @@ Running the script:
 
   2. Download and extract the zip file.
 
-  3. Run it jmblr.rb with Ruby.
+  3. Run it jmblr.rb with Ruby. You can pass command line arguments, and can solve multiple words with a go!
 
-    You can pass command line arguments, and can solve multiple words with a go!
+         ruby jmblr.rb triangle ceissp deiorrw
+        
+         echo triangle | ruby jmblr.rb
 
-        ruby jmblr.rb triangle ceissp deiorrw
+   Any invalid jumble word will not be ignored.
 
-        echo triangle | ruby jmblr.rb
-
-    Any invalid jumble word will not be ignored.
-
-  4. For more help, run ./jmblr.rb -h
+  4. For more help, run `ruby jmblr.rb -h`
