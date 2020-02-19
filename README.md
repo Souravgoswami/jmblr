@@ -16,6 +16,6 @@ Running the script:
         
          echo triangle | ruby jmblr.rb
 
-   Any invalid jumble word will not be ignored.
+   Any invalid jumble word will be ignored.
 
   4. For more help, run `ruby jmblr.rb -h`
