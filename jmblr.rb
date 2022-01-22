@@ -143,25 +143,29 @@ message = ['Please Wait a Moment, Initializing the Dictionary', 'Umm...Just a co
 
 t = Thread.new { '|/-\\'.freeze.each_char { |c| print " \e[2K#{c} #{message}\r" || sleep(0.01) } while true }
 
-$emp, unsorted, sortedwords, i, all_words = ''.freeze, [], [], -1, IO.readlines(path).freeze
+$emp, sortedwords, i, all_words = ''.freeze, [], -1, IO.readlines(path).freeze
+
+sorted_data = {}
 
 while w = all_words[i += 1]
 	w.strip!
 	w.downcase!
+	next if w[/^a-z/]
 
-	unless w[/[^a-z]/]
-		unsorted << w
-		sortedwords << w.split($emp).sort.join
+	sorted = w.split($emp).sort.join
+	sortedwords << sorted
+
+	unless sorted_data.key?(sorted)
+		sorted_data.store(sorted, [w])
+	else
+		sorted_data[sorted] << w
 	end
 end
 
-unsorted_size, results = unsorted.size, []
-
 search_word = ->(word) do
 	word, i = word.strip.downcase.chars.sort.join, -1
-	results.clear
-	results << unsorted[i] if sortedwords[i] == word while (i += 1) < unsorted_size
-	puts results.tap(&:uniq!)
+	results = sorted_data[word]
+	puts results.tap(&:uniq!) if results
 end
 
 t.kill
@@ -235,6 +239,7 @@ else
 			rndwrd = sortedwords.sample.to_s.chars.shuffle.join if search.empty? && rndwrd != search && inp != ?\u0004.freeze
 			colourize.("A fun challenge for you, can you solve #{rndwrd} ?", Colour3)
 		rescue Exception
+			puts $!.full_message
 			exit! 128
 		end
 	end
