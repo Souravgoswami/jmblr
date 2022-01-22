@@ -143,7 +143,7 @@ message = ['Please Wait a Moment, Initializing the Dictionary', 'Umm...Just a co
 
 t = Thread.new { '|/-\\'.freeze.each_char { |c| print " \e[2K#{c} #{message}\r" || sleep(0.01) } while true }
 
-$emp, sortedwords, i, all_words = ''.freeze, [], -1, IO.readlines(path).freeze
+$emp, question_words, i, all_words = ''.freeze, [], -1, IO.readlines(path).freeze
 
 sorted_data = {}
 
@@ -153,12 +153,12 @@ while w = all_words[i += 1]
 	next if w[/^a-z/]
 
 	sorted = w.split($emp).sort.join
-	sortedwords << sorted
 
 	unless sorted_data.key?(sorted)
 		sorted_data.store(sorted, [w])
 	else
 		sorted_data[sorted] << w
+		question_words << w if sorted_data[sorted].count > 4
 	end
 end
 
@@ -185,7 +185,7 @@ end
 if ARGV.select { |arg| arg.start_with?('--random') || arg.start_with?('-r') }.any?
 	ARGV.select { |arg| arg.start_with?('-r') || arg.start_with?('--random') }.join.count(?r).times do
 		puts colourize === 'Generating a Random Word!'
-		wrd = sortedwords.sample until sortedwords.count(wrd) > 3
+		wrd = question_words.sample until question_words.count(wrd) > 3
 		word = wrd.chars.shuffle!.join
 		puts colourize.("Possible matches for '#{word}': ", Colour2.reverse_each)
 		puts search_word.(word)
@@ -204,7 +204,7 @@ unless ARGV.empty?
 else
 	print("\e[2J\e[H\e[3J")
 	colourize.call('Type Something!', Colour5)
-	rndwrd, c, search, inp = sortedwords.sample, '', '', '', ''
+	rndwrd, c, search, inp = question_words.sample, '', '', '', ''
 
 	while true
 		begin
@@ -236,7 +236,7 @@ else
 			colourize.call("Search For: #{search}", Colour2)
 			print(?\n.freeze * (Terminal_Height.to_i / 3))
 
-			rndwrd = sortedwords.sample.to_s.chars.shuffle.join if search.empty? && rndwrd != search && inp != ?\u0004.freeze
+			rndwrd = question_words.sample.to_s.chars.shuffle.join if search.empty? && rndwrd != search && inp != ?\u0004.freeze
 			colourize.("A fun challenge for you, can you solve #{rndwrd} ?", Colour3)
 		rescue Exception
 			puts $!.full_message
