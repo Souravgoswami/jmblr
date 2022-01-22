@@ -60,10 +60,11 @@ if ARGV.to_a.include?('-h') or ARGV.include?('--help')
 			--update		-u	Download missing dictionary from the internet.
 								(update if available)
 			--words=		-w=	Specify the wordlist that will be used for searching.
-					(The word file has to be in plain text ASCII format)
+							(The word file has to be in plain text ASCII format)
 			--random		-r		Show a random word
 							(type -rr or --randomr for 2 words)
 							(-rrr or --randomrr for 3 words and so on)
+			--as-text		-t	Show textual message format
 
 		Useful keys while live searching (running #{__FILE__} without an argument or redirection):
 			backspace		Delete the last character.
@@ -165,7 +166,11 @@ end
 search_word = ->(word) do
 	word, i = word.strip.downcase.chars.sort.join, -1
 	results = sorted_data[word]
-	puts results.tap(&:uniq!) if results
+	if results
+		results.tap(&:uniq!)
+	else
+		[]
+	end
 end
 
 t.kill
@@ -175,7 +180,7 @@ unless STDIN.tty?
 	STDIN.read.split.each do |text|
 		txt = text.tap(&:strip!).tap(&:downcase!)
 		puts colourize.call("Possible matches for '#{txt}': ", Colour2.reverse_each)
-		search_word === txt
+		puts search_word === txt
 		puts colourize.call(?=.freeze * Terminal_Width, Colour2.reverse_each)
 	end
 
@@ -188,17 +193,71 @@ if ARGV.select { |arg| arg.start_with?('--random') || arg.start_with?('-r') }.an
 		wrd = question_words.sample until question_words.count(wrd) > 3
 		word = wrd.chars.shuffle!.join
 		puts colourize.("Possible matches for '#{word}': ", Colour2.reverse_each)
-		puts search_word.(word)
+		puts search_word.(word), ?\n
 	end
 		ARGV.each { |arg| ARGV.delete(arg) if arg.start_with?('--random') || arg.start_with?('-r') }
 	exit! 0 if ARGV.empty?
+end
+
+if ARGV.include?('--as-message') || ARGV.include?('-t')
+	ARGV.delete('--as-message')
+	ARGV.delete('-t')
+
+	ARGV.each do |text|
+		downcased_chars = {}
+
+		txt = text.strip.chars.map.with_index { |x, i|
+			downcased = x.downcase
+			if downcased == x
+				x
+			else
+				downcased_chars[i] = x
+				downcased
+			end
+		}.join
+
+		m = txt.scan(/[a-z]/).join
+		ret1, ret2 = '', ''
+
+
+		txt.chars.each_with_index { |x, i|
+			was_downcased = downcased_chars[i]
+			if was_downcased
+				ret1 << was_downcased
+			else
+				ret1 << x
+			end
+		}
+
+		matches = search_word.call(m) | [m]
+
+		if matches
+			temp = matches[0]
+			orig_index = matches.index(m)
+			matches[0] = m
+			matches[orig_index] = temp
+		end
+
+		print_fmt = if matches && matches.count > 2
+			"#{ret1} (#{matches.shift}: #{matches.join(', ')})#{ret2} "
+		elsif matches && matches.count > 1
+			"#{ret1} (#{matches.join(', ')}) "
+		else
+			"#{ret1}#{ret2} "
+		end
+
+		print print_fmt
+	end
+
+	puts
+	exit
 end
 
 unless ARGV.empty?
 	ARGV.each do |text|
 		txt = text.strip.downcase
 		puts colourize.("Possible matches for '#{txt}': ", Colour2.reverse_each)
-		search_word.(txt)
+		puts search_word.(txt)
 		colourize.call(?=.freeze * Terminal_Width, Colour2.reverse_each)
 	end
 else
@@ -228,7 +287,7 @@ else
 				colourize.call(?=.freeze * Terminal_Width)
 			else
 				puts colourize.call("Possible matches for '#{search}': ", Colour2.reverse_each)
-				search_word.(search)
+				puts search_word.(search)
 				colourize.(?=.freeze * Terminal_Width, Colour1.reverse_each)
 			end
 
