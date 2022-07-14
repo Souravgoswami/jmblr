@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ruby --disable=gems -w
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
 # GNU General Public License v3.0
-# Version 3.0
+# Version 4.0
 
 require 'io/console'
 require 'zlib'
@@ -68,6 +68,7 @@ if ARGV.to_a.include?('-h') or ARGV.include?('--help')
 							(type -rr or --randomr for 2 words)
 							(-rrr or --randomrr for 3 words and so on)
 			--as-text		-t	Show textual message format
+			--file= 		-f=	Read file and format as textual message
 
 		Useful keys while live searching (running #{__FILE__} without an argument or redirection):
 			backspace		Delete the last character.
@@ -201,7 +202,6 @@ if ARGV.include?('--as-message') || ARGV.include?('-t')
 		m = txt.scan(/[a-z]/).join
 		ret1, ret2 = '', ''
 
-
 		txt.chars.each_with_index { |x, i|
 			was_downcased = downcased_chars[i]
 			if was_downcased
@@ -229,6 +229,83 @@ if ARGV.include?('--as-message') || ARGV.include?('-t')
 		end
 
 		print print_fmt
+	end
+
+	puts
+	exit
+end
+
+# Read file if filename given
+arg_file = ARGV.reverse.find { |x| x[/\A\-(\-file|f)\=.+\z/] }
+
+if arg_file
+	ARGV.delete(arg_file)
+	filename = arg_file.partition(?=)[2]
+
+	abort %Q(File "#{filename}" is not readable) unless File.readable?(filename)
+
+	begin
+		file_data = IO.foreach(filename)
+
+		# Colours
+		highlight_single_match = colour_switch == 0 ? "\e[34;1m" : ''
+		highlight_multiple_matches = colour_switch == 0 ? "\e[33;1m" : ''
+		highlight_reset = colour_switch == 0 ? "\e[0m" : ''
+
+		file_data.each do |line|
+			next unless line.valid_encoding?
+
+			line.split(' '.freeze).each do |text|
+				downcased_chars = {}
+
+				txt = text.strip.chars.map.with_index { |x, i|
+					downcased = x.downcase
+					if downcased == x
+						x
+					else
+						downcased_chars[i] = x
+						downcased
+					end
+				}.join
+
+				m = txt.scan(/[a-z]/).join
+				ret1, ret2 = '', ''
+
+				txt.chars.each_with_index { |x, i|
+					was_downcased = downcased_chars[i]
+					if was_downcased
+						ret1 << was_downcased
+					else
+						ret1 << x
+					end
+				}
+
+				matches = search_word.call(m) | [m]
+
+				if matches
+					temp = matches[0]
+					orig_index = matches.index(m)
+					matches[0] = m
+					matches[orig_index] = temp
+				end
+
+				print_fmt = if matches && matches.count > 2
+					"#{ret1} (#{highlight_multiple_matches}#{matches.shift}: #{matches.join(', ')}#{highlight_reset})#{ret2} "
+				elsif matches && matches.count > 1
+					"#{ret1} (#{highlight_single_match}#{matches.join(', ')})#{highlight_reset} "
+				else
+					"#{ret1}#{ret2} "
+				end
+
+				print print_fmt
+			end
+
+			puts
+		end
+	rescue Interrupt, SignalException
+	rescue StandardError
+		puts $!
+		exit
 	end
 
 	puts
