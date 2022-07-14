@@ -69,6 +69,7 @@ if ARGV.to_a.include?('-h') or ARGV.include?('--help')
 							(-rrr or --randomrr for 3 words and so on)
 			--as-text		-t	Show textual message format
 			--file= 		-f=	Read file and format as textual message
+			--no-loader		-nl	Get rid of the loading message
 
 		Useful keys while live searching (running #{__FILE__} without an argument or redirection):
 			backspace		Delete the last character.
@@ -146,7 +147,14 @@ update.call if ARGV.include?('-u') or ARGV.include?('--update')
 message = ['Please Wait a Moment, Initializing the Dictionary', 'Umm...Just a couple of seconds please...',
 				'Hi there! Please wait a moment while I initialize the dictionary...'].sample
 
-t = Thread.new { '|/-\\'.freeze.each_char { |c| print " \e[2K#{c} #{message}\r" || sleep(0.01) } while true }
+if ARGV.include?('--no-loader') || ARGV.include?('-nl')
+	ARGV.delete('--no-loader')
+	ARGV.delete('-nl')
+
+	t = Thread.new { }
+else
+	t = Thread.new { '|/-\\'.freeze.each_char { |c| print " \e[2K#{c} #{message}\r" || sleep(0.01) } while true }
+end
 
 $emp = ''.freeze
 
@@ -156,8 +164,7 @@ sorted_data, question_words = data['anagrams'], data['questions']
 
 search_word = ->(w) { sorted_data[w.strip.downcase.chars.sort.join].to_a.tap(&:uniq!) }
 
-t.kill
-puts
+puts if t.kill.status
 
 unless STDIN.tty?
 	STDIN.read.split.each do |text|
