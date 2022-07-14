@@ -1,7 +1,7 @@
-#!/usr/bin/env -S ruby --disable=gems -w
+#!/usr/bin/env -S ruby --disable=gems
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
 # GNU General Public License v3.0
-# Version 3.0
+# Version 2.0
 
 require 'io/console'
 require 'zlib'
@@ -10,7 +10,6 @@ require 'json'
 STDOUT.sync, STDIN.sync = true, true
 
 Default_Path = "#{__dir__}/words.json.gz"
-# Default_Path = "/usr/share/jmblr/words.json.gz"
 
 Colour1, Colour2, Colour3, Colour4, Colour5 = 40..45, 208..213, 214..219, 196..201, 214..219
 path = nil
@@ -82,59 +81,11 @@ print ?\n.freeze * 2
 exit 0
 end
 
-update = -> do
-	begin
-		colourize.call("Update the database? (N/y): ")
-		exit 0 unless STDIN.gets.chomp.downcase.start_with?('y')
-
-		require 'net/http'
-		puts colourize.call("Downloading data from #{site}")
-
-		site = "https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words.json.gz"
-		data = Net::HTTP.get(URI("#{site}")).tap(&:strip!)
-		unless data == '404: Not Found'
-			puts colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", Colour2)
-
-			begin
-				Dir.mkdir(path.split('/')[0..-2].join('/')) unless File.exist?(path.split('/')[0..-2].join('/'))
-				IO.write(path, data)
-
-			rescue Errno::ENOENT
-				puts colourize.call("Directory doesn't exist. Please create a directory #{path.split('/')[0..-2].join('/')}/", Colour4)
-				puts colourize.call("The file I am trying write to is: #{path}", Colour4)
-				exit 126
-
-			rescue Errno::EACCES
-				puts colourize.call("To write to #{path}, you need root privilege...", Colour4)
-				exit 126
-
-			rescue SocketError
-				puts colourize.('Make sure you have an active internet connection', Colour4.reverse_each)
-				puts colourize.('Retry? (N/y)', Colour4)
-				retry if  gets.chomp.downcase == ?y
-				exit! 126
-			end
-
-			puts colourize.call("All done! The file has been saved to #{path}. Run #{__FILE__} to begin solving puzzles!", Colour5)
-			exit 0
-		else
-			colourize.call 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: <souravgoswami@protonmail.com>'
-			exit 126
-		end
-
-	rescue Exception
-		puts colourize.('Something went wrong!')
-		exit 127
-	end
-	exit 0
-end
-
 unless File.readable?(path)
 	puts colourize.call File.exist?(path) ? "The #{path} file is not readable! How can I read my words? :(" : "The #{path} file doesn't exist. Where are my words? :'("
-	puts colourize.call("Please run #{__FILE__} --update or #{__FILE__} -u to download the wordlist")
 	puts colourize.call("You can mention the path with --words=path or -w=path option")
 	puts colourize.call("Run #{__FILE__} --help or #{__FILE__} -h for more details")
-	puts colourize.call('However, you can run the update now. Do you want that?(Y/n)')
+
 	exit! 120 if STDIN.gets.strip.downcase == ?n
 	update.call
 end
@@ -147,13 +98,21 @@ message = ['Please Wait a Moment, Initializing the Dictionary', 'Umm...Just a co
 
 t = Thread.new { '|/-\\'.freeze.each_char { |c| print " \e[2K#{c} #{message}\r" || sleep(0.01) } while true }
 
-$emp = ''.freeze
+$emp, question_words, i, all_words = ''.freeze, [], -1, IO.readlines(path).freeze
 
 inflated_data = Zlib::GzipReader.open(path).read
 data = JSON.parse(inflated_data)
 sorted_data, question_words = data['anagrams'], data['questions']
 
-search_word = ->(w) { sorted_data[w.strip.downcase.chars.sort.join].to_a.tap(&:uniq!) }
+search_word = ->(word) do
+	word, i = word.strip.downcase.chars.sort.join, -1
+	results = sorted_data[word]
+	if results
+		results.tap(&:uniq!)
+	else
+		[]
+	end
+end
 
 t.kill
 puts
@@ -185,7 +144,7 @@ if ARGV.include?('--as-message') || ARGV.include?('-t')
 	ARGV.delete('--as-message')
 	ARGV.delete('-t')
 
-	ARGV.join(' ').split(' ').each do |text|
+	ARGV.each do |text|
 		downcased_chars = {}
 
 		txt = text.strip.chars.map.with_index { |x, i|
@@ -279,8 +238,9 @@ else
 
 			rndwrd = question_words.sample.to_s.chars.shuffle.join if search.empty? && rndwrd != search && inp != ?\u0004.freeze
 			colourize.("A fun challenge for you, can you solve #{rndwrd} ?", Colour3)
-
-		rescue StandardError
+		rescue SystemExit
+			exit
+		rescue Exception
 			puts $!.full_message
 			exit! 128
 		end
