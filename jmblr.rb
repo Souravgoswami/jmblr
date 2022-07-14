@@ -1,7 +1,7 @@
 #!/usr/bin/env -S ruby --disable=gems -w
 # Written by Sourav Goswami - https://github.com/Souravgoswami/
 # GNU General Public License v3.0
-# Version 4.0
+# Version 4.2
 
 require 'io/console'
 require 'zlib'
@@ -90,9 +90,9 @@ update = -> do
 		exit 0 unless STDIN.gets.chomp.downcase.start_with?('y')
 
 		require 'net/http'
+		site = "https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words.json.gz"
 		puts colourize.call("Downloading data from #{site}")
 
-		site = "https://raw.githubusercontent.com/Souravgoswami/jmblr/master/words.json.gz"
 		data = Net::HTTP.get(URI("#{site}")).tap(&:strip!)
 		unless data == '404: Not Found'
 			puts colourize.call("Writing #{(data.chars.size/1000000.0).round(2)} MB to #{path}. Please Wait a Moment", Colour2)
@@ -123,8 +123,8 @@ update = -> do
 			colourize.call 'Uh Oh! The update is not successful. If the problem persists, please contact the developer: <souravgoswami@protonmail.com>'
 			exit 126
 		end
-
-	rescue Exception
+	rescue SignalException, Interrupt
+	rescue SignalException
 		puts colourize.('Something went wrong!')
 		exit 127
 	end
